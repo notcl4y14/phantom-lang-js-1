@@ -7,6 +7,10 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 21/1/2024 - 22/1/2024
+- Created Lexer.js
+- Created Position.js
+
 // 21/1/2024
 - Initial release
 - Created main.js
