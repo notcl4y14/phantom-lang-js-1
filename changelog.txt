@@ -7,6 +7,11 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 27/1/2024
+- Added positions to tokens
+- Added symbol, number, string, identifier, literal, keyword and closure tokens
+- Changed the lexerizeToken(), hope it looks cleaner
+
 // 21/1/2024 - 22/1/2024
 - Created Lexer.js
 - Created Position.js

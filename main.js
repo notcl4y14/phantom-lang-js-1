@@ -1,18 +1,10 @@
-// let Token = require("./lang/Token.js");
-let Lexer = require("./lang/Lexer.js");
+let util = require ("util");
+let Lexer = require ("./lang/Lexer.js");
 
 let main = function() {
-	// console.log("Hello World!");
-	// let token = new Token("string", "Hello World!");
-	// console.log(token.string());
-	let lexer = new Lexer("<stdin>", "+-*/%^ ++ -- += -= *= /= %= ^= =\n// a comment\n/* multiline\ncomment */");
+	let lexer = new Lexer("<stdin>", "10 + 4\n\"lol\" 'a' \"string in a 'string'\"\nlet x = 5;\nlet y = (x + 10);\nlet π = 3.14;");
 	let tokens = lexer.lexerize();
 
-	console.log(tokens);
-	// console.log(lexer.pos);
-	// console.log(lexer.pos.string(0));
-	// console.log(lexer.pos.string(1));
-	// console.log(lexer.pos.string(2));
-	// console.log(lexer.pos.string(3));
+	console.log( util.inspect(tokens, { depth: null, colors: true, }) );
 }
 main();

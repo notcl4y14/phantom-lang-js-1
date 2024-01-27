@@ -1,5 +1,5 @@
-let Position = require("./Position.js");
-let Token = require("./Token.js");
+let Position = require ("./Position.js");
+let Token = require ("./Token.js");
 
 let Lexer = class {
 	constructor (filename, code) {
@@ -36,104 +36,104 @@ let Lexer = class {
 		let tokens = [];
 
 		while (!this.isEOF()) {
-			let char = this.at();
+			let pos = this.pos.clone();
+			let token = this.lexerizeToken();
 
-			switch (char) {
-				case " ":
-				case "\t":
-				case "\r":
-				case "\n":
-					break;
-
-				// Behold, the will-need-to-fix mess of operators
-				case "+":
-					var op = this.at();
-
-					if (this.next() == "=" || this.next() == "+") {
-						op += this.next();
-						this.advance();
-					}
-
-					tokens.push(new Token("operator", op));
-					break;
-
-				case "-":
-					var op = this.at();
-
-					if (this.next() == "=" || this.next() == "-") {
-						op += this.next();
-						this.advance();
-					}
-
-					tokens.push(new Token("operator", op));
-					break;
-
-				case "*":
-					var op = this.at();
-
-					if (this.next() == "=") {
-						op += this.next();
-						this.advance();
-					}
-
-					tokens.push(new Token("operator", op));
-					break;
-
-				case "/":
-					var op = this.at();
-
-					if (this.next() == "=" || this.next() == "/" || this.next() == "*") {
-						op += this.next();
-						this.advance();
-					}
-
-					if (op == "//") {
-						tokens.push(this.lexerizeComment());
-						break;
-					} else if (op == "/*") {
-						tokens.push(this.lexerizeMultComment());
-						break;
-					}
-
-					tokens.push(new Token("operator", op));
-					break;
-
-				case "%":
-					var op = this.at();
-
-					if (this.next() == "=") {
-						op += this.next();
-						this.advance();
-					}
-
-					tokens.push(new Token("operator", op));
-					break;
-
-				case "^":
-					var op = this.at();
-
-					if (this.next() == "=") {
-						op += this.next();
-						this.advance();
-					}
-
-					tokens.push(new Token("operator", op));
-					break;
-
-				case "=":
-					tokens.push(new Token("operator", this.at()));
-					break;
+			if (token == null) {
+				this.advance();
+				continue;
 			}
+
+			if (!token.pos[0]) {
+				token.pos[0] = pos.clone();
+			}
+
+			if (!token.pos[1]) {
+				token.pos[1] = pos.clone().advance();
+			}
+
+			// if (token != null) tokens.push(token);
+			tokens.push(token);
 
 			this.advance();
 		}
 
-		tokens.push(new Token("EOF"));
+		tokens.push(
+			new Token("EOF").setPos(
+				this.pos.clone(),
+				this.pos.clone().advance()
+			)
+		);
 
 		return tokens;
 	}
 
+	lexerizeToken () {
+		let char = this.at();
+
+		if ((" \t\r\n").includes(this.at())) return (null);
+
+		// Operator | Comment
+		if (("+-*/%^=").includes(this.at())) {
+			let op = this.at();
+
+			if (this.at() != "=") {
+				// += | -= | *= | /= | %= | ^=
+				if (this.next() == "=") {
+					op += this.next();
+					this.advance();
+
+					return (new Token("operator", op));
+				}
+
+				// ++ | --
+				if
+					(("+-").includes(this.at()) &&
+					this.at() == this.next())
+				{
+					op += this.next();
+					this.advance();
+
+					return (new Token("operator", op));
+				}
+
+				// Comment
+				if (this.at() == "/" && this.next() == "/") {
+					return (this.lexerizeComment());
+				} else if (this.at() == "/" && this.next() == "*") {
+					return (this.lexerizeMultComment());
+				}
+			}
+					
+			return (new Token("operator", op));
+		}
+
+		// Symbol
+		else if ((".,:;!&|").includes(this.at())) {
+			return (new Token("symbol", this.at()));
+		}
+
+		// Closure
+		else if (("()[]{}").includes(this.at())) {
+			return (new Token("closure", this.at()));
+		}
+
+		// Number
+		else if (("1234567890").includes(this.at())) {
+			return (this.lexerizeNumber());
+		}
+
+		// String
+		else if (("\"'").includes(this.at())) {
+			return (this.lexerizeString());
+		}
+
+		// Identifier | Literal | Keyword
+		return (this.lexerizeIdentifier());
+	}
+
 	lexerizeComment () {
+		let pos = this.pos.clone();
 		let commentStr = "";
 
 		this.advance();
@@ -142,10 +142,12 @@ let Lexer = class {
 			commentStr += this.advance();
 		}
 
-		return new Token("comment", commentStr);
+		return (new Token("comment", commentStr)
+			.setPos(pos, this.pos.clone()));
 	}
 
 	lexerizeMultComment () {
+		let pos = this.pos.clone();
 		let commentStr = "";
 
 		this.advance();
@@ -156,7 +158,85 @@ let Lexer = class {
 
 		this.advance();
 
-		return new Token("comment", commentStr);
+		return (new Token("comment", commentStr)
+			.setPos(pos, this.pos.clone()));
+	}
+
+	lexerizeNumber () {
+		let leftPos = this.pos.clone();
+		let numStr = "";
+		let float = false;
+
+		while
+			(!this.isEOF() &&
+			("1234567890.").includes(this.at()))
+		{
+			if (this.at() == ".") {
+				if (float) break;
+				float = true;
+			}
+
+			numStr += this.at();
+			this.advance();
+		}
+
+		let rightPos = this.pos.clone();
+
+		this.advance(-1);
+
+		return (new Token("number", Number(numStr))
+			.setPos(leftPos, rightPos));
+	}
+
+	lexerizeString () {
+		let leftPos = this.pos.clone();
+		let str = "";
+		let quote = this.advance();
+
+		while (!this.isEOF() && this.at() != quote) {
+			str += this.advance();
+		}
+
+		let rightPos = this.pos.clone();
+
+		return (new Token("string", str)
+			.setPos(leftPos, rightPos));
+	}
+
+	lexerizeIdentifier () {
+		let leftPos = this.pos.clone();
+		let identStr = "";
+
+		while
+			(!this.isEOF() &&
+			!(" \t\r\n.,:;!&|\"'+-*/%^=()[]{}<>").includes(this.at()))
+		{
+			identStr += this.advance();
+		}
+
+		let rightPos = this.pos.clone();
+
+		this.advance(-1);
+
+		switch (identStr) {
+			case "null":
+			case "true":
+			case "false":
+				return (new Token("literal", identStr)
+					.setPos(leftPos, rightPos));
+
+			case "let":
+			case "if":
+			case "else":
+			case "while":
+			case "for":
+			case "function":
+				return (new Token("keyword", identStr)
+					.setPos(leftPos, rightPos));
+		}
+
+		return (new Token("identifier", identStr)
+			.setPos(leftPos, rightPos));
 	}
 }
 

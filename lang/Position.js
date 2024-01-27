@@ -15,20 +15,20 @@ let Position = class {
 			this.line += 1;
 		}
 
-		return this;
+		return (this);
 	}
 
 	clone () {
-		return new Position(this.filename, this.index, this.line, this.column);
+		return (new Position(this.filename, this.index, this.line, this.column));
 	}
 
-	string (depth = 1) {
+	_string (depth = 1) {
 		let str = "Position { ";
 		if (depth >= 3) str += `filename: ${this.filename}, `;
 		if (depth >= 2) str += `index: ${this.index}, `;
 		if (depth >= 1) str += `line: ${this.line}, column: ${this.column} `;
 		str += "}";
-		return str;
+		return (str);
 	}
 }
 
