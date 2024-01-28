@@ -18,4 +18,4 @@ let Token = class {
 	}
 }
 
-module.exports = Token;
+module.exports = (Token);

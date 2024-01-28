@@ -240,4 +240,4 @@ let Lexer = class {
 	}
 }
 
-module.exports = Lexer;
+module.exports = (Lexer);

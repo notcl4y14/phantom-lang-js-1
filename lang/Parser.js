@@ -48,7 +48,7 @@ class Parser {
 			}
 
 			let expr = res.register(this.stmt());
-			if (res.error) return res;
+			if (res.error) return (res);
 
 			if (expr) program.body.push(expr);
 		}
@@ -60,11 +60,14 @@ class Parser {
 
 	_binaryExpr (ops, func) {
 		let res = new Result();
+
 		let left = res.register(func.call(this));
+		if (res.error) return (res);
 
 		while ( !this.isEOF() && ops.includes(this.at().value) ) {
 			let op = this.advance().value;
 			let right = res.register(func.call(this));
+			if (res.error) return (res);
 
 			return (res.success({
 				type: "BinaryExpr",
@@ -174,4 +177,4 @@ class Parser {
 	}
 }
 
-module.exports = Parser;
+module.exports = (Parser);

@@ -8,6 +8,17 @@
 // ------------------------------------------------------------
 
 // 28/1/2024
+- Created Interpreter.js
+- Added runtime values
+	+ number
+	+ string
+	+ boolean
+	+ null
+	+ program
+	+ binary expression
+- Added parameter
+	+ --last-eval: Shows the last evaluated value
+------------
 - Created Result.js
 - Created Error.js
 - Added error system

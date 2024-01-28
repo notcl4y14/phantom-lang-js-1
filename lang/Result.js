@@ -23,4 +23,4 @@ class Result {
 	}
 }
 
-module.exports = Result;
+module.exports = (Result);

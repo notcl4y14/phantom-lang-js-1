@@ -22,4 +22,4 @@ class Error {
 	}
 }
 
-module.exports = Error;
+module.exports = (Error);

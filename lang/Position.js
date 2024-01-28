@@ -32,4 +32,4 @@ let Position = class {
 	}
 }
 
-module.exports = Position;
+module.exports = (Position);
