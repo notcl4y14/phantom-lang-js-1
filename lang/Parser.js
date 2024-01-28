@@ -1,3 +1,6 @@
+let Result = require ("./Result.js");
+let Error = require ("./Error.js");
+
 class Parser {
 	constructor (tokens) {
 		this.tokens = tokens;
@@ -32,6 +35,7 @@ class Parser {
 	// -----------------------------------------------------------------------
 
 	parse () {
+		let res = new Result();
 		let program = {
 			type: "Program",
 			body: [],
@@ -43,29 +47,32 @@ class Parser {
 				continue;
 			}
 
-			let expr = this.stmt();
+			let expr = res.register(this.stmt());
+			if (res.error) return res;
+
 			if (expr) program.body.push(expr);
 		}
 
-		return (program);
+		return (res.success(program));
 	}
 
 	// -----------------------------------------------------------------------
 
 	_binaryExpr (ops, func) {
-		let left = func.call(this);
+		let res = new Result();
+		let left = res.register(func.call(this));
 
 		while ( !this.isEOF() && ops.includes(this.at().value) ) {
 			let op = this.advance().value;
-			let right = func.call(this);
+			let right = res.register(func.call(this));
 
-			return ({
+			return (res.success({
 				type: "BinaryExpr",
 				left, op, right,
-			});
+			}));
 		}
 
-		return (left);
+		return (res.success(left));
 	}
 
 	// -----------------------------------------------------------------------
@@ -97,36 +104,38 @@ class Parser {
 	// -----------------------------------------------------------------------
 
 	primaryExpr () {
+		let res = new Result();
 		let token = this.advance();
 
 		// NumericLiteral
 		if (token.type == "number") {
-			return ({ type: "NumericLiteral", value: token.value });
+			return (res.success({ type: "NumericLiteral", value: token.value }));
 		}
 
 		// StringLiteral
 		else if (token.type == "string") {
-			return ({ type: "StringLiteral", value: token.value });
+			return (res.success({ type: "StringLiteral", value: token.value }));
 		}
 
 		// Literal
 		else if (token.type == "literal") {
-			return ({ type: "literal", value: token.value });
+			return (res.success({ type: "literal", value: token.value }));
 		}
 
 		// Parenthesised expression
 		else if (token.type == "closure" && token.value == "(") {
-			let value = this.expr();
+			let value = res.register(this.expr());
 
 			// console.log(this.at());
 			// TODO: replace this with the error system, if needed
 			if (!(this.at().type == "closure" && this.at().value == ")")) {
-				throw new Error("Expected closing parenthesis");
+				// throw new Error("Expected closing parenthesis");
+				return res.failure( new Error("Expected closing parenthesis", this.at().pos) );
 			}
 
 			this.advance();
 
-			return (value);
+			return (res.success(value));
 		}
 
 		// Unary expression
@@ -134,9 +143,9 @@ class Parser {
 			((token.type == "operator" && token.value == "-")
 			|| (token.type == "symbol" && token.value == "!"))
 		{
-			let value = this.primaryExpr();
+			let value = res.register(this.primaryExpr());
 
-			return ({ type: "UnaryExpr", operator: token.value, argument: value });
+			return (res.success({ type: "UnaryExpr", operator: token.value, argument: value }));
 		}
 
 		// Repeatable binary expression

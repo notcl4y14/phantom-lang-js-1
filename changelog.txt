@@ -7,6 +7,14 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 28/1/2024
+- Created Result.js
+- Created Error.js
+- Added error system
+- Added parameters
+	+ --lexer: Shows the lexer's output
+	+ --parser: Shows the parser's output
+
 // 27/1/2024 - 28/1/2024
 - Created Parser.js
 - Added expressions
