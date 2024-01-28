@@ -7,6 +7,20 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 27/1/2024 - 28/1/2024
+- Created Parser.js
+- Added expressions
+	+ Program
+	+ Additive expression
+	+ Multiplicative expression
+	+ Power expression
+	+ Numeric Literal
+	+ String Literal
+	+ Literal
+	+ Parenthesised expression
+	+ Non-working repeatable binary expression
+	+ Unary expression
+
 // 27/1/2024
 - Added positions to tokens
 - Added symbol, number, string, identifier, literal, keyword and closure tokens
