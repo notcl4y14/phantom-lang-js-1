@@ -231,6 +231,7 @@ let Lexer = class {
 			case "while":
 			case "for":
 			case "function":
+			case "delete":
 				return new Token("keyword", identStr)
 					.setPos(leftPos, rightPos);
 		}

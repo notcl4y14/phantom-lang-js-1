@@ -1,5 +1,5 @@
-let x = 5;
-let y;
-let z: number;
-y = 10;
-z = x + y;
+let x: number = 5;
+let y: number = 10;
+let z: number = (x + y);
+delete x;
+delete y;

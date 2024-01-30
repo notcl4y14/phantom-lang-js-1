@@ -8,6 +8,12 @@
 // ------------------------------------------------------------
 
 // 30/1/2024
+- Changed and overcommented the code
+- Created RuntimeValue.js
+- Added auto-casting for binary expressions
+- Added delete keyword
+	+ Deletes a variable
+------------
 - The language now reads the files
 - Created "tests" folder
 	+ test.pha

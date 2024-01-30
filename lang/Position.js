@@ -6,30 +6,37 @@ let Position = class {
 		this.column = column;
 	}
 
+	// Advances index, column and line
 	advance (char = "", delta = 1) {
+
+		// Advancing index and column
 		this.index += delta;
 		this.column += delta;
 
+		// If the character is a newline
 		if (char == "\n") {
+			// Resetting column and advancing line
 			this.column = 0;
 			this.line += 1;
 		}
 
+		// Returning self
 		return this;
 	}
 
+	// Makes the clone of itself
 	clone () {
 		return new Position(this.filename, this.index, this.line, this.column);
 	}
 
-	_string (depth = 1) {
-		let str = "Position { ";
-		if (depth >= 3) str += `filename: ${this.filename}, `;
-		if (depth >= 2) str += `index: ${this.index}, `;
-		if (depth >= 1) str += `line: ${this.line}, column: ${this.column} `;
-		str += "}";
-		return str;
-	}
+	// _string (depth = 1) {
+		// let str = "Position { ";
+		// if (depth >= 3) str += `filename: ${this.filename}, `;
+		// if (depth >= 2) str += `index: ${this.index}, `;
+		// if (depth >= 1) str += `line: ${this.line}, column: ${this.column} `;
+		// str += "}";
+		// return str;
+	// }
 }
 
-module.exports = (Position);
+module.exports = Position;

@@ -1,5 +1,6 @@
 let Result = require ("./Result.js");
 let Error = require ("./Error.js");
+let RuntimeValue = require ("./RuntimeValue.js");
 
 class Interpreter {
 	constructor () {}
@@ -9,8 +10,8 @@ class Interpreter {
 	primary (node, env) {
 		let res = new Result();
 
-		if (node.type == "number" || node.value == "string" || node.value == "boolean" || node.type == "null") {
-			return res.succes(node);
+		if (node instanceof RuntimeValue) {
+			return res.success(node);
 		}
 
 		// Values
@@ -18,24 +19,21 @@ class Interpreter {
 
 		// number
 		if (node.type == "NumericLiteral") {
-			return res.success({ type: "number", value: node.value });
+			return res.success(new RuntimeValue("number", node.value));
 		}
 
 		// string
 		else if (node.type == "StringLiteral") {
-			return res.success({ type: "string", value: node.value });
+			return res.success(new RuntimeValue("string", node.value));
 		}
 
 		// literal
 		else if (node.type == "Literal") {
 			if (node.value == "true" || node.value == "false") {
-				return res.success({
-					type: "boolean",
-					value: node.value == "true"
-				});
+				return res.success(new RuntimeValue("boolean", node.value == "true"));
 			}
 
-			return res.success({ type: node.value, value: null });
+			return res.success(new RuntimeValue(node.value, null));
 		}
 
 		// identifier
@@ -84,6 +82,7 @@ class Interpreter {
 
 	// -----------------------------------------------------------------------
 
+	// Misc.
 	program (program, env) {
 		let res = new Result();
 		let last = null;
@@ -96,6 +95,7 @@ class Interpreter {
 		return res.success(last);
 	}
 
+	// Statements
 	// -----------------------------------------------------------------------
 
 	varDeclaration (stmt, env) {
@@ -115,52 +115,71 @@ class Interpreter {
 		return res.success(variable);
 	}
 
+	// Expressions
 	// -----------------------------------------------------------------------
 
 	binaryExpr (expr, env) {
 		let res = new Result();
 
-		let left = res.register(this.primary(expr.left, env));
+		let left,
+			right,
+			value = null;
+
+		left = res.register(this.primary(expr.left, env));
 		if (res.error) return res;
 
-		let right = res.register(this.primary(expr.right, env));
+		right = res.register(this.primary(expr.right, env));
 		if (res.error) return res;
 
-		let operator = expr.op;
-		let value = null;
+		let leftValue = left._number();
+		let rightValue = right._number();
 
-		switch (operator) {
-			// case "+": value = Number((left.value + right.value).toFixed(1)); break;
-			case "+": value = left.value + right.value; break;
-			case "-": value = left.value - right.value; break;
-			case "*": value = left.value * right.value; break;
-			case "/": value = left.value / right.value; break;
-			case "%": value = left.value % right.value; break;
-			case "^": value = left.value ** right.value; break;
+		// if (left.type == "number") {
+		// 	leftValue = left._number();
+		// 	rightValue = right._number();
+		// }
+		if (left.type == "string") {
+			leftValue = left._string();
+			rightValue = right._string();
+		}
+
+		switch (expr.operator) {
+			case "+": value = leftValue + rightValue; break;
+			case "-": value = leftValue - rightValue; break;
+			case "*": value = leftValue * rightValue; break;
+			case "/": value = leftValue / rightValue; break;
+			case "%": value = leftValue % rightValue; break;
+			case "^": value = leftValue ** rightValue; break;
 		}
 
 		let type = typeof(value);
 
-		return res.success({ type, value });
+		return res.success(new RuntimeValue(type, value));
 	}
 
 	unaryExpr (expr, env) {
 		let res = new Result();
 
-		let argument = res.register(this.primary(expr.argument, env));
+		let argument, value = null;
+
+		argument = res.register(this.primary(expr.argument, env));
 		if (res.error) return (res);
 
-		let operator = expr.operator;
-		let value = null;
-
-		switch (operator) {
+		switch (expr.operator) {
 			case "-": value = argument.value * -1; break;
 			case "!": value = !(argument.value); break;
+			case "delete":
+				if (expr.argument.type != "Identifier") {
+					return res.failure( new Error("Expected identifier", expr.pos) );
+				}
+
+				delete env.variables[expr.argument.value];
+				return res.success();
 		}
 
 		let type = typeof(value);
 
-		return res.success({ type, value });
+		return res.success(new RuntimeValue(type, value));
 	}
 
 	assignmentExpr (stmt, env) {
