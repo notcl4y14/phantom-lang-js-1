@@ -10,12 +10,16 @@ let Token = class {
 		this.pos[1] = (right != null)
 			? right
 			: left.clone().advance();
-		return (this);
+		return this;
+	}
+
+	matches (type, value) {
+		return this.type == type && this.value == value;
 	}
 
 	_string () {
-		return (`Token { type: ${this.type}, value: ${this.value} }`);
+		return `Token { type: ${this.type}, value: ${this.value} }`;
 	}
 }
 
-module.exports = (Token);
+module.exports = Token;

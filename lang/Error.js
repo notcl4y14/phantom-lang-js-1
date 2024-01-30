@@ -18,8 +18,8 @@ class Error {
 			? `${leftPos.column + 1}`
 			: `${leftPos.column + 1} - ${rightPos.column + 1}`;
 
-		return (`${filename}: ${line} : ${column} : ${details}`);
+		return `${filename}: ${line} : ${column} : ${details}`;
 	}
 }
 
-module.exports = (Error);
+module.exports = Error;

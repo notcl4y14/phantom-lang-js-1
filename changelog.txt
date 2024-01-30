@@ -7,6 +7,21 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 30/1/2024
+- The language now reads the files
+- Created "tests" folder
+	+ test.pha
+- Created VarDeclaration
+- Created Environment.js
+- Created AssignmentExpr
+- Added "--env" argument
+	+ Shows the environment result
+- Added Identifier to interpreter
+
+// 28/1/2024
+- Renamed the "literal" node type to "Literal"
+- Added unary expression runtime value
+
 // 28/1/2024
 - Created Interpreter.js
 - Added runtime values

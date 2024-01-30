@@ -83,7 +83,7 @@ let Lexer = class {
 					op += this.next();
 					this.advance();
 
-					return (new Token("operator", op));
+					return new Token("operator", op);
 				}
 
 				// ++ | --
@@ -94,42 +94,42 @@ let Lexer = class {
 					op += this.next();
 					this.advance();
 
-					return (new Token("operator", op));
+					return new Token("operator", op);
 				}
 
 				// Comment
 				if (this.at() == "/" && this.next() == "/") {
-					return (this.lexerizeComment());
+					return this.lexerizeComment();
 				} else if (this.at() == "/" && this.next() == "*") {
-					return (this.lexerizeMultComment());
+					return this.lexerizeMultComment();
 				}
 			}
 					
-			return (new Token("operator", op));
+			return new Token("operator", op);
 		}
 
 		// Symbol
 		else if ((".,:;!&|").includes(this.at())) {
-			return (new Token("symbol", this.at()));
+			return new Token("symbol", this.at());
 		}
 
 		// Closure
 		else if (("()[]{}").includes(this.at())) {
-			return (new Token("closure", this.at()));
+			return new Token("closure", this.at());
 		}
 
 		// Number
 		else if (("1234567890").includes(this.at())) {
-			return (this.lexerizeNumber());
+			return this.lexerizeNumber();
 		}
 
 		// String
 		else if (("\"'").includes(this.at())) {
-			return (this.lexerizeString());
+			return this.lexerizeString();
 		}
 
 		// Identifier | Literal | Keyword
-		return (this.lexerizeIdentifier());
+		return this.lexerizeIdentifier();
 	}
 
 	lexerizeComment () {
@@ -142,8 +142,8 @@ let Lexer = class {
 			commentStr += this.advance();
 		}
 
-		return (new Token("comment", commentStr)
-			.setPos(pos, this.pos.clone()));
+		return new Token("comment", commentStr)
+			.setPos(pos, this.pos.clone());
 	}
 
 	lexerizeMultComment () {
@@ -158,8 +158,8 @@ let Lexer = class {
 
 		this.advance();
 
-		return (new Token("comment", commentStr)
-			.setPos(pos, this.pos.clone()));
+		return new Token("comment", commentStr)
+			.setPos(pos, this.pos.clone());
 	}
 
 	lexerizeNumber () {
@@ -184,8 +184,8 @@ let Lexer = class {
 
 		this.advance(-1);
 
-		return (new Token("number", Number(numStr))
-			.setPos(leftPos, rightPos));
+		return new Token("number", Number(numStr))
+			.setPos(leftPos, rightPos);
 	}
 
 	lexerizeString () {
@@ -199,8 +199,8 @@ let Lexer = class {
 
 		let rightPos = this.pos.clone();
 
-		return (new Token("string", str)
-			.setPos(leftPos, rightPos));
+		return new Token("string", str)
+			.setPos(leftPos, rightPos);
 	}
 
 	lexerizeIdentifier () {
@@ -222,8 +222,8 @@ let Lexer = class {
 			case "null":
 			case "true":
 			case "false":
-				return (new Token("literal", identStr)
-					.setPos(leftPos, rightPos));
+				return new Token("literal", identStr)
+					.setPos(leftPos, rightPos);
 
 			case "let":
 			case "if":
@@ -231,13 +231,13 @@ let Lexer = class {
 			case "while":
 			case "for":
 			case "function":
-				return (new Token("keyword", identStr)
-					.setPos(leftPos, rightPos));
+				return new Token("keyword", identStr)
+					.setPos(leftPos, rightPos);
 		}
 
-		return (new Token("identifier", identStr)
-			.setPos(leftPos, rightPos));
+		return new Token("identifier", identStr)
+			.setPos(leftPos, rightPos);
 	}
 }
 
-module.exports = (Lexer);
+module.exports = Lexer;
