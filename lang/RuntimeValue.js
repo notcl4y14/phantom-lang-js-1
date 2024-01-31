@@ -24,7 +24,7 @@ class RuntimeValue {
 				return result;
 			case "number": return this.value;
 			case "boolean":
-				return this.value == "true" ? 1 : 0;
+				return this.value === true ? 1 : 0;
 
 			default: return 0;
 		}

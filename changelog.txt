@@ -7,6 +7,9 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 31/1/2024
+- Added comparisonal expressions
+
 // 30/1/2024
 - Changed and overcommented the code
 - Created RuntimeValue.js

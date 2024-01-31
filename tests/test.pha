@@ -1,5 +1,1 @@
-let x: number = 5;
-let y: number = 10;
-let z: number = (x + y);
-delete x;
-delete y;
+(true > false) == false

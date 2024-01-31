@@ -5,13 +5,11 @@ let Parser = require ("./lang/Parser.js");
 let Interpreter = require ("./lang/Interpreter.js");
 let Environment = require ("./lang/Environment.js");
 
-// let write = (value) => process.stdout.write(value);
-// let writeln = (value) => process.stdout.write(value + "\n");
-
 let logValue = (value) => console.log(util.inspect(value.value, {depth: null, colors: true}));
 let logError = (value) => console.log(value.error._string());
 
 let getFilenameFromArgs = function (args) {
+
 	for (let arg of args) {
 		if (arg[0] == "-") {
 			continue;
@@ -19,9 +17,11 @@ let getFilenameFromArgs = function (args) {
 
 		return arg;
 	}
+
 }
 
 let run = function(filename, code, args) {
+
 	// Lexer
 	let lexer = new Lexer(filename, code);
 	let tokens = lexer.lexerize();
@@ -43,6 +43,7 @@ let run = function(filename, code, args) {
 	if (result.error) return console.log(result.error._string());
 	if (args.includes("--last-eval")) logValue(result);
 	if (args.includes("--env")) console.log(util.inspect(env, {depth: null, colors: true}));
+
 }
 
 let main = function() {
@@ -51,11 +52,11 @@ let main = function() {
 	args = process.argv;
 	let filename = getFilenameFromArgs(args);
 
-	if (!filename)
+	if (!filename) {
 		return writeln( "Filename not specified!" );
-
-	else if (!fs.existsSync(filename))
+	} else if (!fs.existsSync(filename)) {
 		return writeln( `File '${filename}' not found!` );
+	}
 
 	let code = fs.readFileSync(filename, { mode: "r", encoding: "utf-8" });
 	run(filename, code, args);

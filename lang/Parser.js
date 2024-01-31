@@ -112,13 +112,16 @@ class Parser {
 
 	// Statements
 	// -----------------------------------------------------------------------
+
 	stmt () {
+
 		// Variable Declaration
 		if (this.at().matches("keyword", "let")) {
 			return this.varDeclaration();
 		}
 
 		return this.expr();
+
 	}
 
 	// Variable Declaration
@@ -173,12 +176,14 @@ class Parser {
 	// Expressions
 	// -----------------------------------------------------------------------
 	expr () {
+
 		// Assignment Expression
 		if (this.at().type == "identifier" && this.next().matches("operator", "=")) {
 			return this.assignmentExpr();
 		}
 
-		return this.addExpr();
+		return this.compExpr();
+
 	}
 
 	// Assignment Expr
@@ -213,6 +218,11 @@ class Parser {
 	}
 
 	// -----------------------------------------------------------------------
+
+	// Comparisonal Expression
+	compExpr () {
+		return this._binaryExpr( ["==", "!=", "<", ">", "<=", ">="], this.addExpr );
+	}
 
 	// Additive Expression
 	addExpr () {
@@ -290,10 +300,9 @@ class Parser {
 		}
 
 		// Unary expression
-		else if
-			(token.matches("operator", "-") ||
-				token.matches("symbol", "!") ||
-				token.matches("keyword", "delete"))
+		else if (token.matches("operator", "-") ||
+		         token.matches("symbol", "!") ||
+		         token.matches("keyword", "delete"))
 		{
 			let value = res.register(this.primaryExpr());
 

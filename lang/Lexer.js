@@ -74,42 +74,40 @@ let Lexer = class {
 		if ((" \t\r\n").includes(this.at())) return (null);
 
 		// Operator | Comment
-		if (("+-*/%^=").includes(this.at())) {
+		if (("+-*/%^!=<>").includes(this.at())) {
 			let op = this.at();
 
-			if (this.at() != "=") {
-				// += | -= | *= | /= | %= | ^=
-				if (this.next() == "=") {
-					op += this.next();
-					this.advance();
+			// += | -= | *= | /= | %= | ^= | <= | >= | == | !=
+			if (this.next() == "=") {
+				op += this.next();
+				this.advance();
 
-					return new Token("operator", op);
-				}
-
-				// ++ | --
-				if
-					(("+-").includes(this.at()) &&
-					this.at() == this.next())
-				{
-					op += this.next();
-					this.advance();
-
-					return new Token("operator", op);
-				}
-
-				// Comment
-				if (this.at() == "/" && this.next() == "/") {
-					return this.lexerizeComment();
-				} else if (this.at() == "/" && this.next() == "*") {
-					return this.lexerizeMultComment();
-				}
+				return new Token("operator", op);
 			}
-					
+
+			// ++ | --
+			if
+				(("+-").includes(this.at()) &&
+				this.at() == this.next())
+			{
+				op += this.next();
+				this.advance();
+
+				return new Token("operator", op);
+			}
+
+			// Comment
+			if (this.at() == "/" && this.next() == "/") {
+				return this.lexerizeComment();
+			} else if (this.at() == "/" && this.next() == "*") {
+				return this.lexerizeMultComment();
+			}
+				
 			return new Token("operator", op);
 		}
 
 		// Symbol
-		else if ((".,:;!&|").includes(this.at())) {
+		else if ((".,:;&|").includes(this.at())) {
 			return new Token("symbol", this.at());
 		}
 

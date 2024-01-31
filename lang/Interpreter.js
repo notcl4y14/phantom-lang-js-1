@@ -134,22 +134,25 @@ class Interpreter {
 		let leftValue = left._number();
 		let rightValue = right._number();
 
-		// if (left.type == "number") {
-		// 	leftValue = left._number();
-		// 	rightValue = right._number();
-		// }
 		if (left.type == "string") {
 			leftValue = left._string();
 			rightValue = right._string();
 		}
 
 		switch (expr.operator) {
-			case "+": value = leftValue + rightValue; break;
-			case "-": value = leftValue - rightValue; break;
-			case "*": value = leftValue * rightValue; break;
-			case "/": value = leftValue / rightValue; break;
-			case "%": value = leftValue % rightValue; break;
-			case "^": value = leftValue ** rightValue; break;
+			case "+":  value = leftValue + rightValue; break;
+			case "-":  value = leftValue - rightValue; break;
+			case "*":  value = leftValue * rightValue; break;
+			case "/":  value = leftValue / rightValue; break;
+			case "%":  value = leftValue % rightValue; break;
+			case "^":  value = leftValue ** rightValue; break;
+
+			case "==": value = left.value == right.value && left.type == right.type; break;
+			case "!=": value = left.value !== right.value; break;
+			case "<":  value = leftValue < rightValue; break;
+			case ">":  value = leftValue > rightValue; break;
+			case "<=": value = leftValue <= rightValue; break;
+			case ">=": value = leftValue >= rightValue; break;
 		}
 
 		let type = typeof(value);
