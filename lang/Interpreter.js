@@ -1,17 +1,15 @@
-let Result = require ("./Result.js");
 let Error = require ("./Error.js");
 let RuntimeValue = require ("./RuntimeValue.js");
 
-class Interpreter {
+module.exports = (class {
 	constructor () {}
 
 	// -----------------------------------------------------------------------
 
 	primary (node, env) {
-		let res = new Result();
 
 		if (node instanceof RuntimeValue) {
-			return res.success(node);
+			return node;
 		}
 
 		// Values
@@ -19,30 +17,32 @@ class Interpreter {
 
 		// number
 		if (node.type == "NumericLiteral") {
-			return res.success(new RuntimeValue("number", node.value));
+			return new RuntimeValue("number", node.value);
 		}
 
 		// string
 		else if (node.type == "StringLiteral") {
-			return res.success(new RuntimeValue("string", node.value));
+			return new RuntimeValue("string", node.value);
 		}
 
 		// literal
 		else if (node.type == "Literal") {
 			if (node.value == "true" || node.value == "false") {
-				return res.success(new RuntimeValue("boolean", node.value == "true"));
+				return new RuntimeValue("boolean", node.value == "true");
 			}
 
-			return res.success(new RuntimeValue(node.value, null));
+			return new RuntimeValue(node.value, null);
 		}
 
 		// identifier
 		else if (node.type == "Identifier") {
 			let variable = env.lookup(node.value);
 
-			return variable
-				? res.success(variable.value)
-				: res.failure( new Error(`Variable '${node.value}' does not exist`) );
+			if (!variable) {
+				throw new Error(`Variable '${node.value}' does not exist`)
+			}
+
+			return variable.value;
 		}
 
 		// Misc.
@@ -58,6 +58,16 @@ class Interpreter {
 		// var declaration
 		else if (node.type == "VarDeclaration") {
 			return this.varDeclaration(node, env);
+		}
+
+		// if statement
+		else if (node.type == "IfStatement") {
+			return this.ifStatement(node, env);
+		}
+
+		// block statement
+		else if (node.type == "BlockStatement") {
+			return this.blockStatement(node, env);
 		}
 
 		// Expressions
@@ -78,58 +88,77 @@ class Interpreter {
 			return this.assignmentExpr(node, env);
 		}
 
+		throw new Error(`No evaluation method for AST type '${node.type}'`, node.pos);
 	}
 
 	// -----------------------------------------------------------------------
 
 	// Misc.
 	program (program, env) {
-		let res = new Result();
 		let last = null;
 
 		for (let expr of program.body) {
-			last = res.register(this.primary(expr, env));
-			if (res.error) return res;
+			last = this.primary(expr, env);
 		}
 
-		return res.success(last);
+		return last;
 	}
 
 	// Statements
 	// -----------------------------------------------------------------------
 
 	varDeclaration (stmt, env) {
-		let res = new Result();
-		
 		let name = stmt.name.value;
-		let value = res.register(this.primary(stmt.value, env));
-		if (res.error) return res;
+		let value = this.primary(stmt.value, env);
 
 		let type = stmt.rtType != null
 			? stmt.rtType.value
 			: stmt.rtType;
 
 		let variable = env.declare(name, value, type);
-		if (!variable) return res.failure( new Error(`Cannot redeclare '${name}'`, stmt.pos) );
+		if (!variable) {
+			throw new Error(`Cannot redeclare '${name}'`, stmt.pos);
+		}
 
-		return res.success(variable);
+		return variable;
+	}
+
+	ifStatement (stmt, env) {
+		let condition = this.primary(stmt.condition, env);
+		let block = stmt.block;
+		let last = null;
+
+		if (condition.value) {
+
+			last = this.blockStatement(block, env);
+
+		} else if (stmt.alternate) {
+
+			last = this.primary(stmt.alternate, env);
+
+		}
+
+		return last;
+	}
+
+	blockStatement (stmt, env) {
+		let body = stmt.body;
+		let last = null;
+
+		for (let expr of body) {
+			last = this.primary(expr, env);
+		}
+
+		return last;
 	}
 
 	// Expressions
 	// -----------------------------------------------------------------------
 
 	binaryExpr (expr, env) {
-		let res = new Result();
-
-		let left,
-			right,
-			value = null;
-
-		left = res.register(this.primary(expr.left, env));
-		if (res.error) return res;
-
-		right = res.register(this.primary(expr.right, env));
-		if (res.error) return res;
+		let left = this.primary(expr.left, env);
+		let right = this.primary(expr.right, env);
+		let value = null;
 
 		let leftValue = left._number();
 		let rightValue = right._number();
@@ -157,23 +186,19 @@ class Interpreter {
 
 		let type = typeof(value);
 
-		return res.success(new RuntimeValue(type, value));
+		return new RuntimeValue(type, value);
 	}
 
 	unaryExpr (expr, env) {
-		let res = new Result();
-
-		let argument, value = null;
-
-		argument = res.register(this.primary(expr.argument, env));
-		if (res.error) return (res);
+		let argument = this.primary(expr.argument, env);
+		let value = null;
 
 		switch (expr.operator) {
 			case "-": value = argument.value * -1; break;
 			case "!": value = !(argument.value); break;
 			case "delete":
 				if (expr.argument.type != "Identifier") {
-					return res.failure( new Error("Expected identifier", expr.pos) );
+					throw new Error("Expected identifier", expr.pos);
 				}
 
 				delete env.variables[expr.argument.value];
@@ -182,21 +207,18 @@ class Interpreter {
 
 		let type = typeof(value);
 
-		return res.success(new RuntimeValue(type, value));
+		return new RuntimeValue(type, value);
 	}
 
 	assignmentExpr (stmt, env) {
-		let res = new Result();
-		
 		let ident = stmt.ident.value;
-		let value = res.register(this.primary(stmt.value, env));
-		if (res.error) return res;
+		let value = this.primary(stmt.value, env);
 
 		let variable = env.set(ident, value);
-		if (!variable) return res.failure( new Error(`Variable '${ident}' does not exist`, stmt.pos) );
+		if (!variable) {
+			throw new Error(`Variable '${ident}' does not exist`, stmt.pos);
+		}
 
-		return res.success(variable);
+		return variable;
 	}
-}
-
-module.exports = Interpreter;
+});

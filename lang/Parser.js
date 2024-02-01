@@ -1,7 +1,7 @@
-let Result = require ("./Result.js");
 let Error = require ("./Error.js");
 
-class Parser {
+module.exports = (class {
+
 	constructor (tokens) {
 		this.tokens = tokens;
 		this.pos = -1;
@@ -9,13 +9,18 @@ class Parser {
 		this.yumToken();
 	}
 
-	// -----------------------------------------------------------------------
+	///////////////////
 
 	// Returns the current token
 	at (delta = 0) {
 		let arr = this.tokens;
 		let pos = this.pos;
 		return arr[pos + delta];
+	}
+
+	// Returns the next token
+	next () {
+		return this.at(1);
 	}
 
 	// Returns the token and advances to the next one
@@ -25,9 +30,16 @@ class Parser {
 		return prev;
 	}
 
-	// Returns the next token
-	next () {
-		return this.at(1);
+	// Gets the token and checks if the type and the value matche with the given ones
+	expect (type, value, error) {
+		let prev = this.at();
+
+		if (prev.type != type || prev.value != value) {
+			throw error;
+		}
+
+		this.yumToken();
+		return prev;
 	}
 
 	// Checks if the parser has reached EOF
@@ -36,11 +48,10 @@ class Parser {
 		return token.type == "EOF";
 	}
 
-	// -----------------------------------------------------------------------
+	///////////////////
 
 	// Parses, duh
 	parse () {
-		let res = new Result();
 
 		let program = {
 			type: "Program",
@@ -56,126 +67,186 @@ class Parser {
 			}
 
 			// Getting the expression
-			let expr = res.register(this.stmt());
-			if (res.error) return (res);
+			let expr = this.statement();
 
 			// Pushing the expression
 			if (expr) program.body.push(expr);
 
 		}
 
-		return res.success(program);
+		return program;
+
 	}
 
-	// -----------------------------------------------------------------------
+	///////////////////
 
 	// Binary Expression
 	_binaryExpr (ops, func) {
-		let res = new Result();
 
-		let left = res.register(func.call(this));
-		if (res.error) return res;
+		let left = func.call(this);
 
-		while ( !this.isEOF() && ops.includes(this.at().value) ) {
+		while (!this.isEOF() && ops.includes(this.at().value)) {
 
 			let operator = this.yumToken().value;
-			let right = res.register(func.call(this));
-			if (res.error) return res;
+			let right = func.call(this);
 
-			return res.success({
+			return {
 				type: "BinaryExpr",
 				left, operator, right,
 
 				pos: [left.pos[0], right.pos[1]]
-			});
+			};
 
 		}
 
-		return res.success(left);
+		return left;
+
 	}
 
 	// Gets the runtime type
 	_getType () {
-		let res = new Result();
 
 		if (this.at().type == "symbol" && this.at().value == ":") {
 			this.yumToken();
 		}
 
-		let expr = res.register(this.primaryExpr());
-		if (res.error) return res;
+		return this.primaryExpr();
 
-		return res.success(expr);
 	}
 
-	// -----------------------------------------------------------------------
+	////////////////
 
-	// Statements
-	// -----------------------------------------------------------------------
+	  ////////////////
+	 // STATEMENTS //
+	////////////////
 
-	stmt () {
+	statement () {
 
 		// Variable Declaration
 		if (this.at().matches("keyword", "let")) {
 			return this.varDeclaration();
 		}
 
-		return this.expr();
+		// Variable Declaration
+		else if (this.at().matches("keyword", "if")) {
+			return this.ifStatement();
+		}
+
+		return this.expression();
 
 	}
 
 	// Variable Declaration
 	varDeclaration () {
-		let res = new Result();
 
-		// Getting keyword
 		let keyword = this.yumToken();
+		let name = this.primaryExpr();
 
-		// Getting variable name
-		let name = res.register(this.primaryExpr());
-		if (res.error) return res;
-
-		// Checking if it's an identifier
 		if (name.type != "Identifier") {
-			return res.failure( new Error("Expected identifier", name.pos) );
+			throw new Error("Expected identifier", name.pos);
 		}
 
-		// Setting runtime type and value
 		let rtType = null;
 		let value = { type: "Literal", value: "null" };
 
-		// Checking if the declaration has a set type
 		if (this.at().matches("symbol", ":")) {
-			rtType = res.register(this._getType());
-			if (res.error) return res;
+			rtType = this._getType();
 		}
 
-		// Checking for assignment
 		if (!this.yumToken().matches("operator", "=")) {
-			return res.success({
+			return {
 				type: "VarDeclaration",
 				name, rtType, value,
 
 				pos: [keyword.pos[0], name.pos[1]]
-			});
+			};
 		}
 
-		// Getting value
-		value = res.register(this.expr());
-		if (res.error) return res;
+		value = this.expression();
 
-		// Returning result
-		return res.success({
+		return {
 			type: "VarDeclaration",
-			name, rtType, value,
+			name: name,
+			rtType: rtType,
+			value: value,
 
 			pos: [keyword.pos[0], value.pos[1]]
-		});
+		};
+
 	}
 
-	// Expressions
-	// -----------------------------------------------------------------------
-	expr () {
+	ifStatement () {
+
+		let keyword = this.yumToken();
+		let condition = this.expression();
+		let block = this.blockStatement();
+		let alternate = null;
+
+		if (this.at().matches("keyword", "else")) {
+			this.yumToken();
+
+			if (this.at().matches("keyword", "if")) {
+				alternate = this.ifStatement();
+			} else {
+				alternate = this.blockStatement();
+			}
+		}
+
+		return {
+			type: "IfStatement",
+			condition: condition,
+			block: block,
+			alternate: alternate,
+
+			pos: [
+				keyword.pos[0],
+				block.pos[1]
+			]
+		};
+
+	}
+
+	blockStatement () {
+
+		let leftBrace = this.expect(
+			"closure", "{",
+			new Error("Expected '{'", this.at().pos)
+		);
+
+		let body = [];
+
+		while (!this.isEOF() && !this.at().matches("closure", "}")) {
+			if (this.at().type == "comment") {
+				this.yumToken();
+				continue;
+			}
+
+			let expr = this.statement();
+			if (expr) body.push(expr);
+		}
+
+		let rightBrace = this.expect(
+			"closure", "}",
+			new Error("Expected '}'", this.at().pos)
+		);
+
+		return {
+			type: "BlockStatement",
+			body: body,
+
+			pos: [
+				leftBrace.pos[0],
+				rightBrace.pos[1]
+			]
+		};
+
+	}
+
+	  /////////////////
+	 // EXPRESSIONS //
+	/////////////////
+
+	expression () {
 
 		// Assignment Expression
 		if (this.at().type == "identifier" && this.next().matches("operator", "=")) {
@@ -188,36 +259,31 @@ class Parser {
 
 	// Assignment Expr
 	assignmentExpr () {
-		let res = new Result();
 
 		// Getting identifier
-		let ident = res.register(this.primaryExpr());
-		if (res.error) return res;
+		let ident = this.primaryExpr();
 
 		// Checking if it's an identifier
 		if (ident.type != "Identifier") {
-			return res.failure( new Error("Expected identifier", ident.pos) );
+			throw new Error("Expected identifier", ident.pos);
 		}
 
 		// Checking for '='
-		if (!this.at().matches("operator", "=")) {
-			return res.failure( new Error("Expected '='", this.at().pos) );
-		}
-
-		this.yumToken();
+		expect("operator", "=", new Error("Expected '='", this.at().pos));
 
 		// Getting value
-		let value = res.register(this.expr());
-		if (res.error) return res;
+		let value = this.expression();
 
 		// Returning result
-		return res.success({
+		return {
 			type: "AssignmentExpr",
-			ident, value
-		});
+			ident: ident,
+			value: value
+		};
+
 	}
 
-	// -----------------------------------------------------------------------
+	////////////////
 
 	// Comparisonal Expression
 	compExpr () {
@@ -239,64 +305,70 @@ class Parser {
 		return this._binaryExpr( ["^"], this.primaryExpr );
 	}
 
-	// -----------------------------------------------------------------------
+	////////////////
 
 	// Primary Expression
 	primaryExpr () {
-		let res = new Result();
+
 		let token = this.yumToken();
 
 		// NumericLiteral
 		if (token.type == "number") {
-			return res.success({
+
+			return {
 				type: "NumericLiteral",
 				value: token.value,
 
 				pos: token.pos
-			});
+			};
+
 		}
 
 		// StringLiteral
 		else if (token.type == "string") {
-			return res.success({
+
+			return {
 				type: "StringLiteral",
 				value: token.value,
 
 				pos: token.pos
-			});
+			};
+
 		}
 
 		// Identifier
 		else if (token.type == "identifier") {
-			return res.success({ type:
-				"Identifier",
+
+			return {
+				type: "Identifier",
 				value: token.value,
 
 				pos: token.pos
-			});
+			};
+
 		}
 
 		// Literal
 		else if (token.type == "literal") {
-			return res.success({
+
+			return {
 				type: "Literal",
 				value: token.value,
 
 				pos: token.pos
-			});
+			};
+
 		}
 
 		// Parenthesised expression
 		else if (token.type == "closure" && token.value == "(") {
-			let value = res.register(this.expr());
 
-			if (!this.at().matches("closure", ")")) {
-				return res.failure( new Error("Expected closing parenthesis", this.at().pos) );
-			}
+			let value = this.expression();
 
-			this.yumToken();
+			this.expect("closure", ")", new Error("Expected ')'", this.at().pos));
 
-			return res.success(value);
+			return value;
+
 		}
 
 		// Unary expression
@@ -304,20 +376,22 @@ class Parser {
 		         token.matches("symbol", "!") ||
 		         token.matches("keyword", "delete"))
 		{
-			let value = res.register(this.primaryExpr());
 
-			return res.success({
+			let value = this.primaryExpr();
+
+			return {
 				type: "UnaryExpr",
 				operator: token.value,
 				argument: value,
 
 				pos: [token.pos[0], value.pos[1]]
-			});
+			};
+
 		}
 
 		// Semicolon
 		else if (token.type == "symbol" && token.value == ";") {
-			return res.success();
+			return null;
 		}
 
 		// Repeatable binary expression
@@ -345,8 +419,6 @@ class Parser {
 		// }
 
 		// Returning an error
-		return res.failure( new Error(`Unexpected token '${token.value}'`, token.pos) );
+		throw new Error(`Unexpected token '${token.value}'`, token.pos);
 	}
-}
-
-module.exports = Parser;
+});

@@ -1,12 +1,5 @@
 let util = require ("util");
 let fs = require ("fs");
-let Lexer = require ("./lang/Lexer.js");
-let Parser = require ("./lang/Parser.js");
-let Interpreter = require ("./lang/Interpreter.js");
-let Environment = require ("./lang/Environment.js");
-
-let logValue = (value) => console.log(util.inspect(value.value, {depth: null, colors: true}));
-let logError = (value) => console.log(value.error._string());
 
 let getFilenameFromArgs = function (args) {
 
@@ -22,6 +15,11 @@ let getFilenameFromArgs = function (args) {
 
 let run = function(filename, code, args) {
 
+	let Lexer = require ("./lang/Lexer.js");
+	let Parser = require ("./lang/Parser.js");
+	let Interpreter = require ("./lang/Interpreter.js");
+	let Environment = require ("./lang/Environment.js");
+
 	// Lexer
 	let lexer = new Lexer(filename, code);
 	let tokens = lexer.lexerize();
@@ -30,18 +28,36 @@ let run = function(filename, code, args) {
 
 	// Parser
 	let parser = new Parser(tokens);
-	let ast = parser.parse();
+	let ast;
 
-	if (ast.error) return logError(ast);
-	if (args.includes("--parser")) logValue(ast);
+	try {
+		ast = parser.parse();
+	} catch (error) {
+		if (!error._string) {
+			return console.error(error);
+		}
+
+		return console.log(error._string());
+	}
+
+	if (args.includes("--parser")) console.log(util.inspect(ast, {depth: null, colors: true}));
 
 	// Interpreter
 	let env = new Environment();
 	let interpreter = new Interpreter();
-	let result = interpreter.primary(ast.value, env);
+	let result;
 
-	if (result.error) return console.log(result.error._string());
-	if (args.includes("--last-eval")) logValue(result);
+	try {
+		result = interpreter.primary(ast, env);
+	} catch (error) {
+		if (!error._string) {
+			return console.error(error);
+		}
+		
+		return console.log(error._string());
+	}
+
+	if (args.includes("--last-eval")) console.log(result);
 	if (args.includes("--env")) console.log(util.inspect(env, {depth: null, colors: true}));
 
 }
@@ -53,9 +69,9 @@ let main = function() {
 	let filename = getFilenameFromArgs(args);
 
 	if (!filename) {
-		return writeln( "Filename not specified!" );
+		return console.log( "Filename not specified!" );
 	} else if (!fs.existsSync(filename)) {
-		return writeln( `File '${filename}' not found!` );
+		return console.log( `File '${filename}' not found!` );
 	}
 
 	let code = fs.readFileSync(filename, { mode: "r", encoding: "utf-8" });

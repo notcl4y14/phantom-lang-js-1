@@ -1,7 +1,7 @@
 let Position = require ("./Position.js");
 let Token = require ("./Token.js");
 
-let Lexer = class {
+module.exports = (class {
 	constructor (filename, code) {
 		this.code = code;
 		this.pos = new Position(filename, -1, 0, -1);
@@ -52,9 +52,7 @@ let Lexer = class {
 				token.pos[1] = pos.clone().advance();
 			}
 
-			// if (token != null) tokens.push(token);
 			tokens.push(token);
-
 			this.advance();
 		}
 
@@ -237,6 +235,4 @@ let Lexer = class {
 		return new Token("identifier", identStr)
 			.setPos(leftPos, rightPos);
 	}
-}
-
-module.exports = Lexer;
+});
