@@ -7,6 +7,10 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 2/2/2024
+- Added a local scope to the block statement
+- Added array literal
+
 // 1/2/2024
 - Added If and Block statements
 - Removed Result.js

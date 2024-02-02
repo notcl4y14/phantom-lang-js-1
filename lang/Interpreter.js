@@ -39,10 +39,14 @@ module.exports = (class {
 			let variable = env.lookup(node.value);
 
 			if (!variable) {
-				throw new Error(`Variable '${node.value}' does not exist`)
+				throw new Error(`Variable '${node.value}' does not exist`, node.pos);
 			}
 
 			return variable.value;
+		}
+
+		else if (node.type == "ArrayLiteral") {
+			return this.arrayLiteral(node, env);
 		}
 
 		// Misc.
@@ -104,6 +108,20 @@ module.exports = (class {
 		return last;
 	}
 
+	// Literals
+	// -----------------------------------------------------------------------
+
+	arrayLiteral (literal, env) {
+		let rtValue = new RuntimeValue("array", []);
+
+		for (let i = 0; i < literal.values.length; i += 1) {
+			let value = this.primary(literal.values[i], env);
+			rtValue.value.push(value);
+		}
+
+		return rtValue;
+	}
+
 	// Statements
 	// -----------------------------------------------------------------------
 
@@ -143,10 +161,11 @@ module.exports = (class {
 
 	blockStatement (stmt, env) {
 		let body = stmt.body;
+		let scope = new Environment(env);
 		let last = null;
 
 		for (let expr of body) {
-			last = this.primary(expr, env);
+			last = this.primary(expr, scope);
 		}
 
 		return last;

@@ -310,64 +310,37 @@ module.exports = (class {
 	// Primary Expression
 	primaryExpr () {
 
-		let token = this.yumToken();
+		let token = this.at();
 
-		// NumericLiteral
+		// Numeric literal
 		if (token.type == "number") {
-
-			return {
-				type: "NumericLiteral",
-				value: token.value,
-
-				pos: token.pos
-			};
-
+			return this.numericLiteral();
 		}
 
-		// StringLiteral
+		// String literal
 		else if (token.type == "string") {
-
-			return {
-				type: "StringLiteral",
-				value: token.value,
-
-				pos: token.pos
-			};
-
+			return this.stringLiteral();
 		}
 
 		// Identifier
 		else if (token.type == "identifier") {
-
-			return {
-				type: "Identifier",
-				value: token.value,
-
-				pos: token.pos
-			};
-
+			return this.identifier();
 		}
 
 		// Literal
 		else if (token.type == "literal") {
+			return this.literal();
+		}
 
-			return {
-				type: "Literal",
-				value: token.value,
-
-				pos: token.pos
-			};
-
+		// Array literal
+		else if (token.matches("closure", "[")) {
+			return this.arrayLiteral();
 		}
 
 		// Parenthesised expression
 		else if (token.type == "closure" && token.value == "(") {
 
-			let value = this.expression();
-
-			this.expect("closure", ")", new Error("Expected ')'", this.at().pos));
-
-			return value;
+			return this.parenthesisedExpr();
 
 		}
 
@@ -377,20 +350,13 @@ module.exports = (class {
 		         token.matches("keyword", "delete"))
 		{
 
-			let value = this.primaryExpr();
-
-			return {
-				type: "UnaryExpr",
-				operator: token.value,
-				argument: value,
-
-				pos: [token.pos[0], value.pos[1]]
-			};
+			return this.unaryExpr();
 
 		}
 
 		// Semicolon
 		else if (token.type == "symbol" && token.value == ";") {
+			this.yumToken();
 			return null;
 		}
 
@@ -420,5 +386,116 @@ module.exports = (class {
 
 		// Returning an error
 		throw new Error(`Unexpected token '${token.value}'`, token.pos);
+	}
+
+	  //////////////
+	 // LITERALS //
+	//////////////
+
+	numericLiteral () {
+		let token = this.yumToken();
+
+		return {
+			type: "NumericLiteral",
+			value: token.value,
+
+			pos: token.pos
+		};
+	}
+
+	stringLiteral () {
+		let token = this.yumToken();
+
+		return {
+			type: "StringLiteral",
+			value: token.value,
+
+			pos: token.pos
+		};
+	}
+
+	identifier () {
+		let token = this.yumToken();
+
+		return {
+			type: "Identifier",
+			value: token.value,
+
+			pos: token.pos
+		};
+	}
+
+	literal () {
+		let token = this.yumToken();
+
+		return {
+			type: "Literal",
+			value: token.value,
+
+			pos: token.pos
+		};
+	}
+
+	arrayLiteral () {
+
+		let leftBracket = this.expect("closure", "[",
+			new Error("Expected '['", this.at().pos));
+
+		let values = [];
+
+		while (!this.isEOF() && !this.at().matches("closure", "]")) {
+
+			let value = this.expression();
+			values.push(value);
+
+			if (!this.at().matches("symbol", ",")) {
+				if (this.at().matches("closure", "]")) {
+					break;
+				}
+
+				throw new Error("Expected ',' | ']'", this.at().pos);
+			}
+
+			// Advancing past comma
+			this.yumToken();
+
+		}
+
+		let rightBracket = this.expect("closure", "]",
+			new Error("Expected ']'", this.at().pos));
+
+		return {
+			type: "ArrayLiteral",
+			values: values,
+
+			pos: [
+				leftBracket.pos[0],
+				rightBracket.pos[1]
+			]
+		};
+
+	}
+
+	parenthesisedExpr () {
+		this.expect("closure", "(", new Error("Expected '('", this.at().pos));
+
+		let value = this.expression();
+
+		this.expect("closure", ")", new Error("Expected ')'", this.at().pos));
+
+		return value;
+	}
+
+	unaryExpr () {
+		let operator = this.yumToken();
+		let value = this.primaryExpr();
+
+		return {
+			type: "UnaryExpr",
+			operator: operator.value,
+			argument: value,
+
+			pos: [operator.pos[0], value.pos[1]]
+		};
 	}
 });

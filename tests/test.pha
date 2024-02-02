@@ -1,9 +1,2 @@
 let x = 5;
-
-if (x == 5) {
-	"x equals 5";
-} else if (x == 4) {
-	"x equals 4";
-} else {
-	"no idea :/";
-}
+[0, 1, "lol", x,]
