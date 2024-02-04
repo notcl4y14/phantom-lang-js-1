@@ -7,6 +7,12 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 3/2/2024 - 4/2/2024
+- Added while statement
+- Added shorthand assignment expressions
+	+ Broken, need to be fixed
+- The variables now can output errors if they have a type
+
 // 2/2/2024
 - Added a local scope to the block statement
 - Added array literal

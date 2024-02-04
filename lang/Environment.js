@@ -1,61 +1,66 @@
-class Environment {
+module.exports = (class {
+
 	constructor (parent = null) {
 		this.variables = {};
 		this.parent = parent;
-	}
+	};
 
-	// Declares a variable
+	checkType (value, type) {
+		// if type is null, then it's dynamic
+		if (!type) return true;
+		return typeof(value) == type;
+	};
+
 	declare (name, value, type = null) {
 
-		// If the variable is already declared
 		if (this.variables[name]) {
-			// Return nothing
-			return;
+			return 1;
 		}
 
-		// Declaring and returning
+		let isValid = this.checkType(value.value, type);
+
+		if (!isValid) {
+			return 2;
+		}
+
 		this.variables[name] = { type, value };
 		return this.lookup(name);
-	}
+	};
 
-	// Sets the variable
 	set (name, value) {
 
-		// If the variable is not declared
 		if (!this.variables[name]) {
 
-			// Setting the parent environment's variable
 			if (this.parent) {
 				return this.parent.set(name, value);
 			}
 
-			// Return nothing
-			return;
+			return 1;
 		}
 
-		// Setting and returning
+		let variable = this.variables[name];
+		let isValid = this.checkType(value.value, variable.type);
+		
+		if (!isValid) {
+			return 2;
+		}
+
 		this.variables[name].value = value;
 		return this.lookup(name);
-	}
+	};
 
-	// Gets the variable
 	lookup (name) {
 
-		// If the variable does not exist
 		if (!this.variables[name]) {
 
-			// Getting the parent environment's variable
 			if (this.parent) {
 				return this.parent.lookup(name);
 			}
 
-			// Return nothing
 			return;
 		}
 
-		// Returning the variable
 		return this.variables[name];
-	}
-}
+	};
 
-module.exports = Environment;
+});

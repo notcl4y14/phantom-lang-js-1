@@ -1,4 +1,5 @@
 let Error = require ("./Error.js");
+let Environment = require ("./Environment.js");
 let RuntimeValue = require ("./RuntimeValue.js");
 
 module.exports = (class {
@@ -69,6 +70,11 @@ module.exports = (class {
 			return this.ifStatement(node, env);
 		}
 
+		// while statement
+		else if (node.type == "WhileStatement") {
+			return this.whileStatement(node, env);
+		}
+
 		// block statement
 		else if (node.type == "BlockStatement") {
 			return this.blockStatement(node, env);
@@ -134,8 +140,10 @@ module.exports = (class {
 			: stmt.rtType;
 
 		let variable = env.declare(name, value, type);
-		if (!variable) {
-			throw new Error(`Cannot redeclare '${name}'`, stmt.pos);
+
+		switch (variable) {
+			case 1: throw new Error(`Cannot redeclare '${name}'`, stmt.name.pos);
+			case 2: throw new Error(`Value '${value._string()}' is unappliable to variable type of '${type}'`, stmt.value.pos);
 		}
 
 		return variable;
@@ -153,6 +161,21 @@ module.exports = (class {
 		} else if (stmt.alternate) {
 
 			last = this.primary(stmt.alternate, env);
+
+		}
+
+		return last;
+	}
+
+	whileStatement (stmt, env) {
+		let condition = this.primary(stmt.condition, env);
+		let block = stmt.block;
+		let last = null;
+
+		while (condition.value) {
+
+			last = this.blockStatement(block, env);
+			condition = this.primary(stmt.condition, env);
 
 		}
 
@@ -221,7 +244,7 @@ module.exports = (class {
 				}
 
 				delete env.variables[expr.argument.value];
-				return res.success();
+				return null;
 		}
 
 		let type = typeof(value);
@@ -232,10 +255,27 @@ module.exports = (class {
 	assignmentExpr (stmt, env) {
 		let ident = stmt.ident.value;
 		let value = this.primary(stmt.value, env);
+		let varValue = env.lookup(ident).value.value;
+		let result = null;
 
-		let variable = env.set(ident, value);
-		if (!variable) {
-			throw new Error(`Variable '${ident}' does not exist`, stmt.pos);
+		switch (stmt.operator.value) {
+			case "=": result = value; break;
+			case "+=": result = varValue + value; break;
+			case "-=": result = varValue - value; break;
+			case "*=": result = varValue * value; break;
+			case "/=": result = varValue / value; break;
+			case "%=": result = varValue % value; break;
+			case "^=": result = varValue ** value; break;
+			default: throw new Error(`Unexpected token '${stmt.operator.value}'`, stmt.pos);
+		}
+
+		let variable = env.set(ident, result);
+
+		switch (variable) {
+			case 1: throw new Error(`Variable '${ident}' does not exist`, stmt.ident.pos);
+			case 2:
+				let variable = env.lookup(ident);
+				throw new Error(`Value '${value._string()}' is unappliable to variable type of '${variable.type}'`, stmt.value.pos);
 		}
 
 		return variable;

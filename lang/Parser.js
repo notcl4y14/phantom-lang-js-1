@@ -30,11 +30,23 @@ module.exports = (class {
 		return prev;
 	}
 
-	// Gets the token and checks if the type and the value matche with the given ones
+	// Gets the token and checks if the type and the value match with the given ones
 	expect (type, value, error) {
 		let prev = this.at();
 
 		if (prev.type != type || prev.value != value) {
+			throw error;
+		}
+
+		this.yumToken();
+		return prev;
+	}
+
+	// Gets the token and checks if the type matches with the given one
+	expectType (type, error) {
+		let prev = this.at();
+
+		if (prev.type != type) {
 			throw error;
 		}
 
@@ -127,9 +139,14 @@ module.exports = (class {
 			return this.varDeclaration();
 		}
 
-		// Variable Declaration
+		// If Statement
 		else if (this.at().matches("keyword", "if")) {
 			return this.ifStatement();
+		}
+
+		// While Statement
+		else if (this.at().matches("keyword", "while")) {
+			return this.whileStatement();
 		}
 
 		return this.expression();
@@ -206,6 +223,25 @@ module.exports = (class {
 
 	}
 
+	whileStatement () {
+
+		let keyword = this.yumToken();
+		let condition = this.expression();
+		let block = this.blockStatement();
+
+		return {
+			type: "WhileStatement",
+			condition: condition,
+			block: block,
+
+			pos: [
+				keyword.pos[0],
+				block.pos[1]
+			]
+		};
+
+	}
+
 	blockStatement () {
 
 		let leftBrace = this.expect(
@@ -249,7 +285,11 @@ module.exports = (class {
 	expression () {
 
 		// Assignment Expression
-		if (this.at().type == "identifier" && this.next().matches("operator", "=")) {
+		if
+			(this.at().type == "identifier" &&
+			this.next().type == "operator" &&
+			this.next().value.includes("="))
+		{
 			return this.assignmentExpr();
 		}
 
@@ -268,8 +308,8 @@ module.exports = (class {
 			throw new Error("Expected identifier", ident.pos);
 		}
 
-		// Checking for '='
-		expect("operator", "=", new Error("Expected '='", this.at().pos));
+		// Checking for an operator
+		let operator = this.expectType("operator", new Error("Expected operator", this.at().pos));
 
 		// Getting value
 		let value = this.expression();
@@ -278,7 +318,13 @@ module.exports = (class {
 		return {
 			type: "AssignmentExpr",
 			ident: ident,
-			value: value
+			operator: operator,
+			value: value,
+
+			pos: [
+				ident.pos[0],
+				value.pos[1]
+			]
 		};
 
 	}

@@ -1,2 +1,8 @@
-let x = 5;
-[0, 1, "lol", x,]
+let i: number = 0;
+
+// UNCOMMENT: outputs an error
+// i = "this will output an error";
+
+while (i < 5) {
+	i = i + 1;
+}
