@@ -254,8 +254,11 @@ module.exports = (class {
 
 	assignmentExpr (stmt, env) {
 		let ident = stmt.ident.value;
-		let value = this.primary(stmt.value, env);
+		let value = this.primary(stmt.value, env).value;
 		let varValue = env.lookup(ident).value.value;
+		// console.log(varValue);
+		// console.log(value);
+		// console.log(varValue + value);
 		let result = null;
 
 		switch (stmt.operator.value) {
@@ -269,13 +272,14 @@ module.exports = (class {
 			default: throw new Error(`Unexpected token '${stmt.operator.value}'`, stmt.pos);
 		}
 
-		let variable = env.set(ident, result);
+		let rtValue = new RuntimeValue(typeof(result), result);
+		let variable = env.set(ident, rtValue);
 
 		switch (variable) {
 			case 1: throw new Error(`Variable '${ident}' does not exist`, stmt.ident.pos);
 			case 2:
 				let variable = env.lookup(ident);
-				throw new Error(`Value '${value._string()}' is unappliable to variable type of '${variable.type}'`, stmt.value.pos);
+				throw new Error(`Value '${value}' is unappliable to variable type of '${variable.type}'`, stmt.value.pos);
 		}
 
 		return variable;

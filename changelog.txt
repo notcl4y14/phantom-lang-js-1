@@ -7,6 +7,9 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 4/2/2024
+- Fixed shorthand assignment expressions and runtime value type error
+
 // 3/2/2024 - 4/2/2024
 - Added while statement
 - Added shorthand assignment expressions
