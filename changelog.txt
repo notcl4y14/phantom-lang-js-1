@@ -7,6 +7,18 @@
 // UNDER DEVELOPMENT VERSIONS
 // ------------------------------------------------------------
 
+// 5/2/2024
+- Added member, call expressions
+- Added repetitive binary expressions (FINALLY FIGURED IT OUT! :D)
+- Added object literal
+- Added std environment loader
+	+ log
+		* write (...): outputs the text
+		* writeln (...): outputs the text with a newline
+		* jsCall (value): calls JS functions
+- Added jscall.pha to the "tests" folder
+- Added RuntimeValue.toRtValue()
+
 // 4/2/2024
 - Fixed shorthand assignment expressions and runtime value type error
 

@@ -1,8 +1,28 @@
-let i: number = 0;
+let obj = {
+	x: 0,
+	y: 0,
+	z: 0,
 
-// UNCOMMENT: outputs an error
-// i = "this will output an error";
-
-while (i < 5) {
-	i += 1;
+	setPos: null,
 }
+
+// obj.x = 10;
+log.setObjectProperty("obj", "x", 10);
+
+log.writeln(obj.x);
+
+// obj.setPos(10, 40, -10);
+
+// 10 + 4 + 10;
+
+// let x = {
+// 	y: {
+// 		z: {
+// 			func: null,
+// 		}
+// 	}
+// };
+// 
+// x.y;
+// x.y["z"];
+// x.y["z"].func(x.y.z);

@@ -1,0 +1,2 @@
+let result = log.jsCall("console.log('Hello World!')");
+log.writeln("Result: " + result);

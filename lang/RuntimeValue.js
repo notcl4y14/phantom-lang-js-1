@@ -4,6 +4,32 @@ class RuntimeValue {
 		this.value = value;
 	}
 
+	static toRtValue (value) {
+		switch (typeof(value)) {
+			case "string": return new RuntimeValue("string", value);
+			case "number": return new RuntimeValue("number", value);
+			case "boolean": return new RuntimeValue("boolean", value);
+			case "array":
+				let arr = [];
+
+				for (let i = 0; i < value.length; i += 1) {
+					arr.push(RuntimeValue.toRtValue(value[i]));
+				}
+
+				return new RuntimeValue("array", arr);
+			case "object":
+				let obj = {};
+
+				for (let [key, val] of Object.entries(value)) {
+					obj[key] = RuntimeValue.toRtValue(val);
+				}
+
+				return new RuntimeValue("object", obj);
+			case "null":
+			case "undefined": return new RuntimeValue("null", null);
+		}
+	}
+
 	_string () {
 		switch (this.type) {
 			case "null": return this.type;

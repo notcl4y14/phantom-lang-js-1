@@ -13,6 +13,67 @@ let getFilenameFromArgs = function (args) {
 
 }
 
+let loadStd = function (env) {
+	let RuntimeValue = require("./lang/RuntimeValue.js");
+
+	env.declare("log", new RuntimeValue("object", {
+		"write": new RuntimeValue("function", function (args, env) {
+			process.stdout.write(args[0]._string());
+
+			if (args.length <= 1) {
+				return new RuntimeValue("null", null);
+			}
+
+			for (let i = 1; i < args.length; i += 1) {
+				process.stdout.write(" " + args[i]._string());
+			}
+		}),
+
+		"writeln": new RuntimeValue("function", function(args, env) {
+			process.stdout.write(args[0]._string());
+
+			if (args.length <= 1) {
+				process.stdout.write("\n");
+				return new RuntimeValue("null", null);
+			}
+
+			for (let i = 1; i < args.length; i += 1) {
+				process.stdout.write(" " + args[i]._string());
+			}
+
+			process.stdout.write("\n");
+		}),
+
+		"jsCall": new RuntimeValue("function", function(args, env) {
+			try {
+				return RuntimeValue.toRtValue(eval(args[0]._string()));
+			} catch (e) {
+				return new RuntimeValue("string", `${e}`);
+			}
+		}),
+
+		"setObjectProperty": new RuntimeValue("function", function(args, env) {
+			let path = [];
+
+			for (let i = 1; i < args.length; i += 1) {
+				if (i == args.length - 1) {
+					let current = env.variables[args[0]._string()].value.value;
+
+					for (let j = 0; j < path.length; j += 1) {
+						current = current[path[j]].value;
+						if (!current) return new RuntimeValue("null", null);
+					}
+
+					current = args[i];
+					return new RuntimeValue("null", null);
+				}
+
+				path.push(args[i]._string());
+			}
+		})
+	}), "object");
+}
+
 let run = function(filename, code, args) {
 
 	let Lexer = require ("./lang/Lexer.js");
@@ -44,8 +105,9 @@ let run = function(filename, code, args) {
 
 	// Interpreter
 	let env = new Environment();
+	loadStd(env);
 	let interpreter = new Interpreter();
-	let result;
+	let result = null;
 
 	try {
 		result = interpreter.primary(ast, env);

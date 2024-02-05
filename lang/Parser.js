@@ -54,6 +54,16 @@ module.exports = (class {
 		return prev;
 	}
 
+	expectNode (func, type, error) {
+		let node = func.call(this);
+
+		if (node.type != type) {
+			throw error;
+		}
+
+		return node;
+	}
+
 	// Checks if the parser has reached EOF
 	isEOF() {
 		let token = this.at();
@@ -98,17 +108,19 @@ module.exports = (class {
 		let left = func.call(this);
 
 		while (!this.isEOF() && ops.includes(this.at().value)) {
-
 			let operator = this.yumToken().value;
 			let right = func.call(this);
 
-			return {
+			// YES, LOOKS LIKE I FIGURED IT OUT!
+			// REPETITIVE BINARY EXPRESSIONS!!! :D
+			// I just thought of why do we use
+			// while statement in the binary expression lol
+			// Also, CREDIT: CodePulse
+			left = {
 				type: "BinaryExpr",
 				left, operator, right,
-
 				pos: [left.pos[0], right.pos[1]]
 			};
-
 		}
 
 		return left;
@@ -117,13 +129,46 @@ module.exports = (class {
 
 	// Gets the runtime type
 	_getType () {
+		if (this.at().matches("symbol", ":")) this.yumToken();
+		return this.primaryExpr();
+	}
 
-		if (this.at().type == "symbol" && this.at().value == ":") {
-			this.yumToken();
+	_args () {
+		this.expect("closure", "(", new Error("Expected '('", this.at().pos));
+		let args = this.at().matches("closure", ")")
+			? []
+			: this._argsList();
+		// this.expect("closure", ")", new Error("Expected ')'", this.at().pos));
+
+		return args;
+	}
+
+	_argsList () {
+		let args = [this.expression()];
+
+		while (!this.isEOF() && this.at().matches("symbol", ",") && this.yumToken()) {
+			args.push(this.expression());
 		}
 
-		return this.primaryExpr();
+		this.expect("closure", ")", new Error("Expected ')'", this.at().pos));
 
+		return args;
+	}
+
+	_body (until, func = this.statement) {
+		let body = [];
+
+		while (!this.isEOF() && !until) {
+			if (this.at().type == "comment") {
+				this.yumToken();
+				continue;
+			}
+
+			let expr = func.call(this);
+			if (expr) body.push(expr);
+		}
+
+		return body;
 	}
 
 	////////////////
@@ -157,12 +202,7 @@ module.exports = (class {
 	varDeclaration () {
 
 		let keyword = this.yumToken();
-		let name = this.primaryExpr();
-
-		if (name.type != "Identifier") {
-			throw new Error("Expected identifier", name.pos);
-		}
-
+		let name = this.expectNode(this.primaryExpr, "Identifier", new Error("Expected identifier", this.at().pos));
 		let rtType = null;
 		let value = { type: "Literal", value: "null" };
 
@@ -174,7 +214,6 @@ module.exports = (class {
 			return {
 				type: "VarDeclaration",
 				name, rtType, value,
-
 				pos: [keyword.pos[0], name.pos[1]]
 			};
 		}
@@ -243,28 +282,11 @@ module.exports = (class {
 	}
 
 	blockStatement () {
+		// let body = [];
 
-		let leftBrace = this.expect(
-			"closure", "{",
-			new Error("Expected '{'", this.at().pos)
-		);
-
-		let body = [];
-
-		while (!this.isEOF() && !this.at().matches("closure", "}")) {
-			if (this.at().type == "comment") {
-				this.yumToken();
-				continue;
-			}
-
-			let expr = this.statement();
-			if (expr) body.push(expr);
-		}
-
-		let rightBrace = this.expect(
-			"closure", "}",
-			new Error("Expected '}'", this.at().pos)
-		);
+		let leftBrace = this.expect("closure", "{", new Error("Expected '{'", this.at().pos));
+		let body = this._body(!this.at().matches("closure", "}"));
+		let rightBrace = this.expect("closure", "}", new Error("Expected '}'", this.at().pos));
 
 		return {
 			type: "BlockStatement",
@@ -283,72 +305,166 @@ module.exports = (class {
 	/////////////////
 
 	expression () {
-
-		// Assignment Expression
-		if
-			(this.at().type == "identifier" &&
-			this.next().type == "operator" &&
-			this.next().value.includes("="))
-		{
-			return this.assignmentExpr();
-		}
-
-		return this.compExpr();
-
+		return this.assignmentExpr();
 	}
 
 	// Assignment Expr
 	assignmentExpr () {
+		let left = this.objectExpr();
 
-		// Getting identifier
-		let ident = this.primaryExpr();
+		if (this.at().type == "operator" && this.at().value.includes("=")) {
+			let operator = this.expectType("operator", new Error("Expected operator", this.at().pos));
+			// let ident = this.expectNode(this.primaryExpr, "Identifier", new Error("Expected identifier", this.at().pos));
+			let value = this.expression();
 
-		// Checking if it's an identifier
-		if (ident.type != "Identifier") {
-			throw new Error("Expected identifier", ident.pos);
+			return {
+				type: "AssignmentExpr",
+				ident: left,
+				operator: operator,
+				value: value,
+
+				pos: [
+					left.pos[0],
+					value.pos[1]
+				]
+			};
 		}
 
-		// Checking for an operator
-		let operator = this.expectType("operator", new Error("Expected operator", this.at().pos));
+		return left;
+	}
 
-		// Getting value
-		let value = this.expression();
+	// CREDIT: tylerlaceby
 
-		// Returning result
+	objectExpr() {
+
+		if (!this.at().matches("closure", "{")) {
+			return this.compExpr();
+		}
+
+		let leftBrace = this.yumToken();
+		let properties = [];
+
+		while (!this.isEOF() && !this.at().matches("closure", "}")) {
+			let key = this.yumToken();
+				// this.expect("Identifier",
+					// new Error("Object literal key exprected", this.at().pos)
+				// ).value;
+
+			if (key.type != "identifier" && key.type != "string") {
+				throw new Error("Object literal key expected", key.pos);
+			}
+
+			key = key.value;
+
+			if (this.at().matches("symbol", ",")) {
+				this.yumToken();
+				properties.push({ type: "Property", key });
+				continue;
+			} else if (this.at().matches("closure", "}")) {
+				properties.push({ type: "Property", key });
+				continue;
+			}
+
+			this.expect("symbol", ":",
+				new Error("Missing colon following identifier", this.at().pos)
+			);
+
+			let value = this.expression();
+
+			properties.push({ type: "Property", key, value });
+			if (!this.at().matches("closure", "}")) {
+				this.expect("symbol", ",",
+					new Error("Expected comma or closing bracket following property", this.at().pos)
+				);
+			}
+		}
+
+		// console.log(this.at());
+
+		let rightBrace = this.expect("closure", "}", new Error("Missing closing brace in object literal", this.at().pos));
+
 		return {
-			type: "AssignmentExpr",
-			ident: ident,
-			operator: operator,
-			value: value,
-
-			pos: [
-				ident.pos[0],
-				value.pos[1]
-			]
+			type: "ObjectLiteral",
+			properties: properties,
+			pos: [leftBrace.pos[0], rightBrace.pos[1]]
 		};
-
 	}
 
 	////////////////
 
-	// Comparisonal Expression
-	compExpr () {
-		return this._binaryExpr( ["==", "!=", "<", ">", "<=", ">="], this.addExpr );
+	compExpr =	() => this._binaryExpr( ["==", "!=", "<", ">", "<=", ">="], this.addExpr );
+	addExpr =	() => this._binaryExpr( ["+", "-"], this.multExpr );
+	multExpr =	() => this._binaryExpr( ["*", "/", "%"], this.powerExpr );
+	powerExpr =	() => this._binaryExpr( ["^"], this.callMemberExpr );
+
+	////////////////
+
+	// CREDIT: tylerlaceby
+	// https://youtu.be/pzqsQ7Xflw4
+
+	callMemberExpr () {
+		let member = this.memberExpr();
+
+		if (this.at().matches("closure", "(")) {
+			return this.callExpr(member);
+		}
+
+		return member;
 	}
 
-	// Additive Expression
-	addExpr () {
-		return this._binaryExpr( ["+", "-"], this.multExpr );
+	callExpr (caller) {
+		let callExpr = {
+			type: "CallExpr",
+			caller: caller,
+			args: this._args(),
+			// TODO: change position
+			pos: caller.pos
+		};
+
+		if (this.at().matches("closure", "(")) {
+			callExpr = this.callExpr(callExpr);
+		}
+
+		return callExpr;
 	}
 
-	// Multiplicative Expression
-	multExpr () {
-		return this._binaryExpr( ["*", "/", "%"], this.powerExpr );
-	}
+	memberExpr () {
+		let object = this.primaryExpr();
 
-	// Power Expression
-	powerExpr () {
-		return this._binaryExpr( ["^"], this.primaryExpr );
+		while
+			(!this.isEOF() &&
+			(this.at().matches("symbol", ".") ||
+			this.at().matches("closure", "[")))
+		{
+			let operator = this.yumToken();
+
+			let property = null;
+			let computed = null;
+
+			if (operator.matches("symbol", ".")) {
+				computed = false;
+				property = this.primaryExpr();
+
+				if (property.type != "Identifier") {
+					throw new Error("Cannot use dot operator without an identifier", this.at().pos);
+				}
+			} else if (operator.matches("closure", "[")) {
+				computed = true;
+				property = this.expression();
+
+				this.expect("closure", "]", new Error("Missing closing bracket in computed property", this.at().pos));
+			}
+
+			object = {
+				type: "MemberExpr",
+				object: object,
+				property: property,
+				computed: computed,
+				pos: [object.pos[0], property.pos[1]]
+			};
+		}
+
+		return object;
 	}
 
 	////////////////
@@ -405,30 +521,6 @@ module.exports = (class {
 			this.yumToken();
 			return null;
 		}
-
-		// Repeatable binary expression
-		// I don't really think it works
-		// else if (token.type == "operator") {
-
-		// 	// if ( token.value != "=" ) this.yumToken(-1);
-		// 	// console.log(this.at());
-
-		// 	// Additive expression
-		// 	if ( ["+", "-"].includes(token.value) ) {
-		// 		return this.addExpr();
-		// 	}
-
-		// 	// Multiplicative expression
-		// 	else if ( ["*", "/", "%"].includes(token.value) ) {
-		// 		return this.multExpr();
-		// 	}
-
-		// 	// Power expression
-		// 	else if ( token.value == "^" ) {
-		// 		return this.powerExpr();
-		// 	}
-
-		// }
 
 		// Returning an error
 		throw new Error(`Unexpected token '${token.value}'`, token.pos);

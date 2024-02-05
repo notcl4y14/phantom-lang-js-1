@@ -63,4 +63,25 @@ module.exports = (class {
 		return this.variables[name];
 	};
 
+	// lookupObject (name, path) {
+
+	// 	if (!this.variables[name]) {
+
+	// 		if (this.parent) {
+	// 			return this.parent.lookupObject(name);
+	// 		}
+
+	// 		return;
+	// 	}
+
+	// 	let current = this.variables[name];
+
+	// 	for (let i = 0; i < path.length; i += 1) {
+	// 		current = current.value[path[i]];
+	// 		if (!current) return;
+	// 	}
+
+	// 	return current;
+	// }
+
 });

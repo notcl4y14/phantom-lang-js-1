@@ -50,6 +50,10 @@ module.exports = (class {
 			return this.arrayLiteral(node, env);
 		}
 
+		else if (node.type == "ObjectLiteral") {
+			return this.objectLiteral(node, env);
+		}
+
 		// Misc.
 		// -----------------------------------------------------------------------
 
@@ -98,6 +102,14 @@ module.exports = (class {
 			return this.assignmentExpr(node, env);
 		}
 
+		else if (node.type == "MemberExpr") {
+			return this.memberExpr(node, env);
+		}
+
+		else if (node.type == "CallExpr") {
+			return this.callExpr(node, env);
+		}
+
 		throw new Error(`No evaluation method for AST type '${node.type}'`, node.pos);
 	}
 
@@ -128,6 +140,27 @@ module.exports = (class {
 		return rtValue;
 	}
 
+	objectLiteral (literal, env) {
+		let properties = {};
+
+		for (let i = 0; i < literal.properties.length; i += 1) {
+			let property = literal.properties[i];
+
+			let value = !property.value
+				? env.lookup(property.key)
+				: this.primary(property.value, env);
+
+			properties[property.key] = value;
+
+			if (!value) {
+				// TODO: change position
+				throw new Error(`Variable '${property.key}' does not exist`, literal.pos);
+			}
+		}
+
+		return new RuntimeValue("object", properties);
+	}
+
 	// Statements
 	// -----------------------------------------------------------------------
 
@@ -155,13 +188,9 @@ module.exports = (class {
 		let last = null;
 
 		if (condition.value) {
-
 			last = this.blockStatement(block, env);
-
 		} else if (stmt.alternate) {
-
 			last = this.primary(stmt.alternate, env);
-
 		}
 
 		return last;
@@ -173,10 +202,8 @@ module.exports = (class {
 		let last = null;
 
 		while (condition.value) {
-
 			last = this.blockStatement(block, env);
 			condition = this.primary(stmt.condition, env);
-
 		}
 
 		return last;
@@ -253,13 +280,19 @@ module.exports = (class {
 	}
 
 	assignmentExpr (stmt, env) {
-		let ident = stmt.ident.value;
+		let ident = stmt.ident.type == "Identifier"
+			? stmt.ident.value
+			: stmt.ident.property.value;
 		let value = this.primary(stmt.value, env).value;
-		let varValue = env.lookup(ident).value.value;
-		// console.log(varValue);
-		// console.log(value);
-		// console.log(varValue + value);
+		let varValue = null;
 		let result = null;
+
+		if (stmt.ident.type == "Identifier") {
+			varValue = env.lookup(ident).value.value
+		} else if (stmt.ident.type == "MemberExpr") {
+			varValue = this.memberExpr(stmt.ident, env);
+			// console.log(varValue);
+		}
 
 		switch (stmt.operator.value) {
 			case "=": result = value; break;
@@ -283,5 +316,40 @@ module.exports = (class {
 		}
 
 		return variable;
+	}
+
+	// CREDIT: My old rewrite
+	// https://github.com/notcl4y14/phantom-lang-old/blob/main/frontend/interpreter/interpreter.js
+
+	memberExpr (expr, env) {
+		let object = this.primary(expr.object, env);
+		let property = expr.property;
+		let result = null;
+		// console.log(expr);
+
+		switch (object.type) {
+			// case "array": result = object.values[property.value];
+			// case "object": result = object.values[property.value];
+			case "array":
+			case "object": result = object.value[property.value]; break;
+			default: throw new Error(`Cannot access properties in ${object.type}`, expr.pos);
+		}
+
+		return result == null
+			? new RuntimeValue("null", null)
+			: result;
+	}
+
+	callExpr (expr, env) {
+		let args = [];
+
+		for (let i = 0; i < expr.args.length; i += 1) {
+			args.push(this.primary(expr.args[i], env));
+		}
+
+		let func = this.primary(expr.caller, env);
+		let result = func.value(args, env) || new RuntimeValue("null", null);
+
+		return result;
 	}
 });
